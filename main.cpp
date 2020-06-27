@@ -18,11 +18,8 @@ typedef uint8_t byte;
 #define MODE 0 // пин настраивается на вход или выход
 #define STATE 1 // установка высокого или низкого уровня пина
 
-#define CLK PB0  // pin 5
-#define SDA PB1  // pin 6
-#define BTN_SET PB2
-#define BTN_PLUS PB3
-#define BTN_MINUS PB4
+#define CLK PB1  // pin 5
+#define SDA PB0  // pin 6
 
 // tm1637
 #define TM1637_SETTINGS 0x44
@@ -41,34 +38,33 @@ void changePin(byte pin, bool state, byte mode = STATE) {
   else (state ? (DDRB |= (1 << pin)) : (DDRB &= ~(1 << pin)));
 }
 
-void tm1637Start() {
+void _tm1637Start() {
   changePin(CLK, HIGH);
   changePin(SDA, HIGH);
   changePin(SDA, LOW);
 }
 
-void tm1637WriteByte(byte data) {
+void _tm1637WriteByte(byte data) {
   byte i = 0;
-  send: 
+  send:
   changePin(CLK, LOW);
   changePin(SDA, (data & (1 << i)));
   changePin(CLK, HIGH);
   i += 1;
-  if(i < 8) goto send; // goto экономит 44 байта по сравнению с for или while
+  if (i < 8) goto send;  // goto экономит 44 байта по сравнению с for или while
 }
 
-bool tm1637Ask() {
+bool _tm1637Ask() {
   changePin(SDA, INPUT, MODE);
   changePin(CLK, LOW);
   _delay_us(100);
   changePin(CLK, HIGH);
-  bool ask = PINB | (1 << SDA);
+  bool ask = PINB & (1 << SDA);
   changePin(SDA, OUTPUT, MODE);
-  changePin(CLK, LOW);
   return !ask;
 }
 
-void tm1637Stop() {
+void _tm1637Stop() {
   changePin(CLK, LOW);
   changePin(SDA, LOW);
   changePin(CLK, HIGH);
@@ -76,10 +72,10 @@ void tm1637Stop() {
 }
 
 bool tm1637SendCommand(byte command) {
-  tm1637Start();
-  tm1637WriteByte(command);
-  bool ask = tm1637Ask();
-  tm1637Stop();
+  _tm1637Start();
+  _tm1637WriteByte(command);
+  bool ask = _tm1637Ask();
+  _tm1637Stop();
   return ask;
 }
 
@@ -90,14 +86,16 @@ bool tm1637PrintSymbol(byte position, byte symbol) {
   position--;
   position += 0xC0;
 
-  tm1637Start();
-  tm1637WriteByte(position);
-  tm1637Ask();
-  tm1637WriteByte(symbol);
-  bool ask = tm1637Ask();
-  tm1637Stop();
+  _tm1637Start();
+  _tm1637WriteByte(position);
+  _tm1637Ask();
+  _tm1637WriteByte(symbol);
+  bool ask = _tm1637Ask();
+  _tm1637Stop();
   return ask;
 }
+/******************************************************/
+
 
 int main(void) {
   _delay_ms(1000);
@@ -109,12 +107,5 @@ int main(void) {
   tm1637SendCommand(TM1637_BRIGHTNESS);
 
   while (1) {
-    tm1637PrintSymbol(1, tm1637Numbers[1]);
-    tm1637PrintSymbol(2, tm1637Numbers[3]);
-    tm1637PrintSymbol(3, tm1637Numbers[5]);
-    tm1637PrintSymbol(4, tm1637Numbers[9]);
-    _delay_ms(10000);
   }
-
-  return 0;
 }
