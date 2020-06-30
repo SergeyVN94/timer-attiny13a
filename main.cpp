@@ -19,27 +19,28 @@ typedef uint8_t byte;
 #define MODE true // пин настраивается на вход или выход
 #define STATE false // установка высокого или низкого уровня пина
 
-// pins
+// пины
 #define PIN_CLK PB1 // pin 6
 #define PIN_SDA PB0 // pin 5
-#define PIN_BUTTONS PB2 // pin 7
+#define PIN_BUTTONS PB3 // pin 2
+#define PIN_SIGNAL PB4 // pin 3
 
-// buttons
+// кнопки
 #define BTN_SET 0
 #define BTN_PLUS 1
 #define BTN_MINUS 2
 #define BTN_NOT_SELECTED 3
 
-// program states
+// состояния программы
 #define SET_MINUTES 0
 #define SET_SECONDS 1
 #define WORK 2
 #define PAUSE 3
 #define WORK_END 4
 
-// other config
+// другие настройки
 #define MAX_COUNTER 75
-#define BTN_BLOCK_TIME 10
+#define SIGNAL_TIME 5 // in seconds
 
 /*
   Настройка пина.
@@ -131,7 +132,6 @@ uint16_t getButtonsAnalogValue() {
 
 byte checkButtons() {
   uint16_t analogValue = getButtonsAnalogValue();
-  byte currentBtn = 0;
 
   if (analogValue >= 950 && analogValue <= 1023) return BTN_SET;
   else if (analogValue >= 470 && analogValue <= 530) return BTN_PLUS;
@@ -167,7 +167,8 @@ ISR(TIM0_COMPA_vect) {
 int main(void) {
   changePin(PIN_CLK, OUTPUT, MODE);
   changePin(PIN_SDA, OUTPUT, MODE);
-  changePin(PB3, INPUT, MODE);
+  changePin(PIN_SIGNAL, OUTPUT, MODE);
+  changePin(PIN_BUTTONS, INPUT, MODE);
 
   tm1637SendCommand(TM1637_SETTINGS);
   tm1637SendCommand(TM1637_BRIGHTNESS);
@@ -186,19 +187,18 @@ int main(void) {
     TCNT0 - таймер/счетчик
     OCR0A и OCR0B - регистры сравнения
   */
-  
   TCCR0A |= (1 << WGM01); // режим СТС (сравнение с регистром)
   TCCR0B |= (1 << CS01) | (1 << CS00); // предделитель частоты на 64
   TIMSK0 |= (1 << OCIE0A); // сравнение с регистрам А включение прерывания
-
   OCR0A = 250;
-
   TCNT0 = 0; // сброс таймера
   sei(); // включить прерывания
 
   // АЦП
   ADMUX = 3; // сравнение с питанием, ацп на пине PB3
 
+  // инициализация
+  byte signalCounter = SIGNAL_TIME;
   printTime();
 
   while (1) {
@@ -231,6 +231,20 @@ int main(void) {
         if (selectedBtn == BTN_SET || selectedBtn == BTN_MINUS) setStartState();
         break;
       }
+      case WORK_END: {
+        if (isTimerTick && signalCounter > 0) signalCounter -= 1;
+
+        byte isSignalDisable = signalCounter == 0 || selectedBtn != BTN_NOT_SELECTED;
+
+        if (isSignalDisable) {
+          setStartState();
+          signalCounter = SIGNAL_TIME;
+        }
+
+        changePin(PIN_SIGNAL, isSignalDisable ? LOW : HIGH);
+
+        break;
+      }
       default: {
         setStartState();
         break;
@@ -238,10 +252,10 @@ int main(void) {
     }
     
     if (isTimerTick) {
-      if (PROGRAM_STATE == WORK) {     
-        pointsOn = !pointsOn; 
+      if (PROGRAM_STATE == WORK) {    
         if (secondsCounter == 0) PROGRAM_STATE = WORK_END;
-        else { secondsCounter -= 1; }
+        else secondsCounter -= 1;
+        pointsOn = !pointsOn; 
         printTime();
       }
 
