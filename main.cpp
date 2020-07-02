@@ -206,16 +206,15 @@ int main(void) {
 
     switch (PROGRAM_STATE) {
       case SET_MINUTES: {
-        if (selectedBtn == BTN_PLUS && secondsCounter / 60 < 99) secondsCounter += 60;
-        if (selectedBtn == BTN_MINUS && secondsCounter / 60 > 0) secondsCounter -= 60;
+        if (selectedBtn == BTN_PLUS) secondsCounter = (secondsCounter < 5940) ? (secondsCounter + 60) : 0;
+        if (selectedBtn == BTN_MINUS) secondsCounter = (secondsCounter >= 60) ? (secondsCounter - 60) : 5940;
         if (selectedBtn == BTN_SET) PROGRAM_STATE = SET_SECONDS;
         if (selectedBtn != BTN_NOT_SELECTED) printTime();
         break;
       }
       case SET_SECONDS: {
-        byte seconds = secondsCounter % 60;
-        if (selectedBtn == BTN_PLUS && seconds < 60) secondsCounter += 10;
-        if (selectedBtn == BTN_MINUS && secondsCounter > 0) secondsCounter -= 10;
+        if (selectedBtn == BTN_PLUS) secondsCounter = (secondsCounter < 5990) ? secondsCounter + 10 : 0;
+        if (selectedBtn == BTN_MINUS) secondsCounter = (secondsCounter > 0) ? (secondsCounter - 10) : 5990;
         if (selectedBtn == BTN_SET) PROGRAM_STATE = WORK;
         if (selectedBtn != BTN_NOT_SELECTED) printTime();
         break;
