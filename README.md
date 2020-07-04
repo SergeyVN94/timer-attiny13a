@@ -1,5 +1,11 @@
 # Таймер на attiny13a и tm1637
 
+## Установка и прошивка
+Установка: `git clone https://github.com/SergeyVN94/timer-attiny13a.git && cd timer-attiny13a`.  
+Сборка: `make`.  
+Прошивка: `make firmware`.  
+Проверьте путь до программатора и поправьте переменную `DEVICE_PATH` в Makefile, если нужно. Путь по умолчанию `/dev/ttyUSB0`.
+
 ## Схема подключения
 ![alt text](/docs/timer.png)  
   
